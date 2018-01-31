@@ -17,21 +17,84 @@ head(trees)
 ```
 
 ```{r}
-acerrub_subset = subset(trees, subset = spcode == 'ACERRUB')
+acer_sub = subset(trees, subset = spcode == 'ACERRUB')
+head(acer_sub)
+summary(acer_sub)
 
-head(arubrum_subset)
-
-abiefra_subset= subset(trees, subset = spcode == 'ABIEFRA')
-abiefra_subset$spcode = droplevels(abiefra_subset$spcode)
-
-head(abiefra_subset)
-
-pairs()
+abies_sub= subset(trees, subset = spcode == 'ABIEFRA')
+head(abies_sub)
+summary(abies_sub)
 
 ```
+
+
 ```{r}
+plot(abies_sub$cover~ abies_sub$elev)
+```
+
+```{r}
+pairs(abies_sub, panel=panel.smooth)
+```
+
+```{r}
+names(abies_sub)
+abies_expvar = abies_sub[1:nrow(abies_sub), 4:9]
+head(abies_expvar)
+
+pairs(abies_expvar, panel = panel.smooth)
+```
+
+```{r}
+abies_modmax = lm(abies_sub$cover ~ abies_sub$elev + abies_sub$tci + abies_sub$streamdist + abies_sub$disturb + abies_sub$beers)
+
+par(mfrow=c(2,2))
+plot(abies_modmax)
+
+summary(abies_modmax)
+```
+
+```{r}
+abies_maxmod_wobeers = update(abies_modmax, ~. -abies_sub$beers)
+
+summary(abies_maxmod_wobeers)
+```
+
+```{r}
+abies_wobeers_wodisturb = update(abies_maxmod_wobeers, ~. -abies_sub$disturb)
+
+summary(abies_wobeers_wodisturb)
+```
+
+```{r}
+abies_wobeers_wostream = update(abies_maxmod_wobeers, ~. -abies_sub$streamdist)
+
+summary(abies_wobeers_wostream)
+```
+
+```{r}
+abies_wobwos_wotci = update(abies_wobeers_wostream, ~. -abies_sub$tci)
+summary(abies_wobwos_wotci)
+```
+
+```{r}
+abies_wobwos_woelev = update(abies_wobeers_wostream, ~. -abies_sub$elev)
+summary(abies_wobwos_woelev)
+```
+
+```{r}
+abies_simpmod = abies_wobeers_wostream
+
+par(mfrow= c(2,2))
+plot(abies_simpmod)
 
 ```
 
+```{r}
+summary(abies_simpmod)
+```
 
+```{r}
+library(car)
+Anova(abies_simpmod)
+```
 
