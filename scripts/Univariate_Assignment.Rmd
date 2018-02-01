@@ -9,6 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+###Subset Data
+
+This code reads in the dataset and allows me to see what that data looks like.
 ```{r}
 trees = read.csv('../data/treedata_subset.csv')
 
@@ -16,6 +19,7 @@ head(trees)
 
 ```
 
+In this code, I make two subsets of trees.  One is all of the rows for Acer rubrum.  The other is for all of the rows of Abies fraseri.  In each, I use summary to make sure it subsetted correctly.
 ```{r}
 acer_sub = subset(trees, subset = spcode == 'ACERRUB')
 head(acer_sub)
@@ -27,15 +31,17 @@ summary(abies_sub)
 
 ```
 
-
+This code makes a plot of the response variable (cover) against one of the explanatory variables (elevation).  There seems to be a positive correlation between the two.
 ```{r}
-plot(abies_sub$cover~ abies_sub$elev)
+plot(abies_sub$cover~ abies_sub$elev, xlab = 'Elevation', ylab = 'Cover')
 ```
 
+This code is used to see check for interactions between variables.  This chart was not used because it includes non-explanatory variables like species name.
 ```{r}
 pairs(abies_sub, panel=panel.smooth)
 ```
 
+This code removes all variables except for the possible explanatory ones and the reponse variable.  The plot is made again between these variables.  It is easy to see a much better correlation between cover and elevation than cover and beers, so elevation will probably be more significant in the model.  There appears to be little correlation between explanatory variables other than between elevation and tci, elevation and stream distance and tci and stream distance, so these relationships will be tested to see if they should be included in the model.
 ```{r}
 names(abies_sub)
 abies_expvar = abies_sub[1:nrow(abies_sub), 4:9]
@@ -44,7 +50,11 @@ head(abies_expvar)
 pairs(abies_expvar, panel = panel.smooth)
 ```
 
+###Make the maximal model with no interactions
+
+The maximal OLS model includes all 5 possible explanatory variables (elev, tci, streamdist, disturb, and beers).  The Residuals vs. Fitted plot is just okay since there is a bit of a pattern.  2, 14, and 15 are identified as outliers.  The Normal Q-Q plot shows that the model fits okay since the many of the points are on the dashed line.  The same outliers are identified.  The Scale-Location plot shows slight heteroscedasticity to the right and identifies the same outliers.  The Residuals vs. Leverage plot shows 2, 3, and 5 as outliers.  The summary indicates R-squared is 0.5824 and the adjust R-squared is 0.5011.
 ```{r}
+
 abies_modmax = lm(abies_sub$cover ~ abies_sub$elev + abies_sub$tci + abies_sub$streamdist + abies_sub$disturb + abies_sub$beers)
 
 par(mfrow=c(2,2))
@@ -53,24 +63,28 @@ plot(abies_modmax)
 summary(abies_modmax)
 ```
 
+###Subtract from the maximal model
+Since beers has the least significance in the model due to its high p-value, it is removed from the model, and the adjusted R-squared value increases to 0.5146.  This means the model fits the data better when transformed slope aspect is not included.  Because of this, beers is left out.
 ```{r}
-abies_maxmod_wobeers = update(abies_modmax, ~. -abies_sub$beers)
+abies_modmax_wobeers = update(abies_modmax, ~. -abies_sub$beers)
 
 summary(abies_maxmod_wobeers)
 ```
 
+The next least significant variable is one of the disturb categories.  When it is removed the djusted R-squared goes down, so disturb is left in.  The disturb category with the very low p-value must be significant enough that this variable helps explain cover.
 ```{r}
-abies_wobeers_wodisturb = update(abies_maxmod_wobeers, ~. -abies_sub$disturb)
+abies_wobeers_wodisturb = update(abies_modmax_wobeers, ~. -abies_sub$disturb)
 
 summary(abies_wobeers_wodisturb)
 ```
 
+Next streamdist is removed because of its high p-value.  The adjusted R-squared increased to 0.5188, so this model fits the data better.  Stream and beers remain out of the simplified model.
 ```{r}
-abies_wobeers_wostream = update(abies_maxmod_wobeers, ~. -abies_sub$streamdist)
+abies_wobeers_wostream = update(abies_modmax_wobeers, ~. -abies_sub$streamdist)
 
 summary(abies_wobeers_wostream)
 ```
-
+Next tci and elev are each removed.  The R-squared goes down each time, so these variables are returned in the simplified model.
 ```{r}
 abies_wobwos_wotci = update(abies_wobeers_wostream, ~. -abies_sub$tci)
 summary(abies_wobwos_wotci)
@@ -81,20 +95,220 @@ abies_wobwos_woelev = update(abies_wobeers_wostream, ~. -abies_sub$elev)
 summary(abies_wobwos_woelev)
 ```
 
+The simplified model is the one with beers and streamdist columns variables removed since these are not significant.  Elev is most significant and then the virgin category of disturb followed by the tci.  The plots have not changed much from the maximal model because beers and streamdist were not affecting the model very much.
 ```{r}
 abies_simpmod = abies_wobeers_wostream
+
+summary(abies_simpmod)
 
 par(mfrow= c(2,2))
 plot(abies_simpmod)
 
 ```
 
+###Adding interactions
+
+Interactions should only be added if they are significant to the model because they make it more complex.  The adjusted R-squared values are compared when the correlations identified at the beginning of this analysis are added (elev, tci, and streamdist).
+```{r}
+summary(update(abies_simpmod, ~. + elev*tci, data = abies_sub))
+
+```
+The adjusted R-squared value went down and the p-value is high, so this interaction is removed, and the next is added.  The same occurred.
+```{r}
+summary(update(abies_simpmod, ~. + elev*streamdist, data = abies_sub))
+```
+
+Again...
+```{r}
+summary(update(abies_simpmod, ~. + tci*streamdist, data = abies_sub))
+```
+
+Finally...
+```{r}
+summary(update(abies_simpmod, ~. + elev*tci*streamdist, data = abies_sub))
+```
+
+Because this interaction overly complicates the model, the increase in adjusted R-squared may just be due to the introduction of many explanatory variables, and the most significant variable (elevation) is now the least significant.  This is left out.
+
+###Use AIC
+When AIC is used on the maximal model with no interactions, it also drops beers and streamdist, but leaves in disturb.  Since the difference in AIC with and without disturb is less than 2 (0.71), these are equally good models.  Since my earlier analysis showed an increase in R-squared when disturb is left in the model, it will remain.
+```{r}
+library(MASS)
+stepAIC(abies_modmax)
+```
+
+Through this analysis abies_simpmod was determined to be the minimal adequate model for Abies fraseri.
+```{r}
+summary(abies_simpmod)
+
+```
+
+The p-values in this Anova are the same as those in the summary above.
+```{r}
+library(car)
+Anova(abies_simpmod, type=3)
+```
+
+###Remove outliers
+
+The outliers as identified in the plots are removed from the data, and the summaries are compared.
+```{r}
+par(mfrow=c(2,2))
+plot(abies_simpmod)
+
+abies_sub_woout = abies_sub[-c(2, 14, 15),]
+dim(abies_sub_woout)
+dim(abies_sub)
+
+
+abies_simpmod_woout = lm(cover~ elev + tci + disturb, data = abies_sub_woout)
+
+
+summary(abies_simpmod_woout)
+
+```
+
+```{r}
+summary(abies_simpmod)
+```
+The adjusted R-squared value goes up a lot when the outliers are removed and tci and the virgin category of disturb become significant explanatory variables in the model.
+
+#####Making the Acer model
+To make the model of the Acer rubrum data, the same steps were followed.  There was much less correlation identified in this dataset, which makes sense considering this tree is a generalist.
+
+```{r}
+names(acer_sub)
+acer_expvar = acer_sub[1:nrow(acer_sub), 4:9]
+head(acer_expvar)
+
+pairs(acer_expvar, panel = panel.smooth)
+```
+According to this data, there are a few outliers, but the model generally fits okay.  The Normal Q-Q plot shows most of the points on the dashed line.  There is little pattern in the Residualsvs Fitted plot and no heteroscedastity in the Scale-Location plot.  365 has more leverage than the other data, and other outliers are 407 and 306.
+
+The summary shows some significant p-values, but the adjusted R-squared is very low at 0.03558.  Disturb should be removed first to make a better model.
+```{r}
+acer_modmax = lm(cover ~ elev + tci + streamdist + disturb + beers, data =acer_sub)
+
+par(mfrow=c(2,2))
+plot(acer_modmax)
+
+summary(acer_modmax)
+```
+
+```{r}
+acer_modmax_wodist = update(acer_modmax, ~. -disturb, data=acer_sub)
+
+summary(acer_modmax_wodist)
+```
+The adjusted R-square went up, so disturb is left out.  Next, tci is removed.
+
+```{r}
+acer_wodist_wotci = update(acer_modmax_wodist, ~. -tci, data=acer_sub)
+
+summary(acer_wodist_wotci)
+```
+The R-squared went down, so this variable is left in.  The rest of the variables have significant p-values, so they should not be removed.  When the significant variable beers is removed, the R-squared goes down a lot.  See below.
+
+```{r}
+acer_wodist_wobeers = update(acer_modmax_wodist, ~. -beers, data=acer_sub)
+
+summary(acer_wodist_wobeers)
+```
+
+The AIC function comes to the same conclusion.  The lowest AIC is achieved when just disturb is removed from the model.
+```{r}
+library(MASS)
+stepAIC(acer_modmax)
+```
+
+```{r}
+
+acer_simpmod = acer_modmax_wodist
+
+names(acer_sub)
+acer_expvar = acer_sub[1:nrow(acer_sub), 4:9]
+head(acer_expvar)
+
+pairs(acer_expvar, panel = panel.smooth)
+
+acer_simpmod_wint = update(acer_simpmod, ~. +elev*tci)
+summary(acer_simpmod_wint)
+
+```
+Since the p-value went down, and the adjusted R-squared increased when the interaction between elev and tci was added, this interaction remains.
+
+```{r}
+acer_simpmod_wint2 = update(acer_simpmod_wint, ~. +elev*streamdist)
+summary(acer_simpmod_wint2)
+```
+The p-value increased and this interaction is not significant, so it is removed.
+```{r}
+acer_simpmod_wint3 = update(acer_simpmod_wint, ~. +tci*streamdist)
+summary(acer_simpmod_wint3)
+```
+The R-squared decreased, the p-value went up, and the interaction is not significant, so it was removed.  The minimal adequate model includes all explanatory variables except disturb and the interaction between elev and tci.
+```{r}
+acer_simpmod = acer_simpmod_wint
+
+summary(acer_simpmod)
+```
+
+```{r}
+library(MASS)
+Anova(acer_simpmod, type =3)
+```
+Again, the p-values between the summary and Anova functions are the same.
+
+```{r}
+par(mfrow = c(2,2))
+plot(acer_simpmod)
+```
+Because 407 and 410 appear as outliers in 3/4 plots and 365 exerts a lot more leverage than other datapoints, these are removed.
+
+```{r}
+acer_sub_woout = acer_sub[-c(407, 410, 365),]
+dim(acer_sub_woout)
+dim(acer_sub)
+
+
+acer_simpmod_woout = lm(cover~ elev + tci + streamdist + beers + elev*tci, data = acer_sub_woout)
+
+
+summary(acer_simpmod_woout)
+```
+When these outliers are removed the p-value decreases but the R-squared value also decreases.  The coefficients still barely change.
+
+*****Question 1 Answers
 ```{r}
 summary(abies_simpmod)
 ```
 
 ```{r}
-library(car)
-Anova(abies_simpmod)
+summary(acer_simpmod)
 ```
+  
+Since the adjusted R-squared value was 0.5188 even when outliers were included and up to 0.7 when they were removed.  The Abies model seems to explain cover relatively well.  The Acer model does not explain cover well.  While more of the explanatory variables are significant to the model, as shown by the p-values, the model only explains 4% of the variance in the data.  The AIC value is also much lower for the Abies model (44.68) than the Acer model (998.58).  This is another value that indicates the Abies model is a better fit for the data.  This is not surprising because Abies fraseri is a habitat specialist and Acer rubrum is a generalist.  It is easier to predict where Abies fraseri will choose to live because it is pickier.
+  
+For the Abies model, elevation and whether the area is virgin forest are the most important explanatory variables.  For the Acer model, distance from a stream and the transformed slope aspect are most important.
+  
+The OLS assumptions are:
+  *The residuals are normally distributed.  
+  *There is a linear response to the driver.
+  *Samples are independent.
+  *Equal variance (no heteroscedasticity).
+  
+```{r}
+par(mfrow = c(2,2))
+plot(abies_simpmod)
+
+plot(cover~ elev + tci + disturb, data = abies_sub)
+```
+  
+```{r}
+par(mfrow = c(2,2))
+plot(acer_simpmod)
+
+plot(cover~ elev + tci + streamdist + beers, data = acer_sub)
+```
+  
 
