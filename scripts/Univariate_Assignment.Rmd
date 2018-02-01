@@ -143,7 +143,7 @@ summary(abies_simpmod)
 
 ```
 
-The p-values in this Anova are the same as those in the summary above.
+The p-values in this Anova are the same as those in the summary above.  Except, it lumps disturb together to give the overall significance of disturbance.
 ```{r}
 library(car)
 Anova(abies_simpmod, type=3)
@@ -291,33 +291,37 @@ Since the adjusted R-squared value was 0.5188 even when outliers were included a
   
 For the Abies model, elevation and whether the area is virgin forest are the most important explanatory variables.  For the Acer model, distance from a stream and the transformed slope aspect are most important.
   
-The OLS assumptions are:
-  *The residuals are normally distributed.  
+The main OLS assumptions are listed below.  The plots for each model are below this discussion.
+  *The residuals are normally distributed.
+      *The Q-Q plots for both Abies and Acer show that most of the points are on the dashed line.  This means that the residuals are mostly normally distributed while there are some outliers.
   *There is a linear response to the driver.
+      *Since one of the exaplanatory variables is categorical (disturb) and the response variable (cover) is only integers (and therefore not continuous), there cannot be a linear response.
   *Samples are independent.
+      *I am not sure that we can address this issue the way the data was explored here.  Some of the datapoints do have more leverage than others though.
   *Equal variance (no heteroscedasticity).
-  
+      *The Residuals vs. Fitted and Scale Location plots for the Abies model many of the points closed on the right rather than evenly distributed around the plot.  This indicates that the data is slightly skewed, so there is not entirely equal variance.  The Acer model has even more distinct patterns with lines of points in these plots.  This has occurred because the response variable is in integers.
+      
 ```{r}
 par(mfrow = c(2,2))
 plot(abies_simpmod)
 
-plot(cover~ elev + tci + disturb, data = abies_sub)
 ```
   
 ```{r}
 par(mfrow = c(2,2))
 plot(acer_simpmod)
 
-plot(cover~ elev + tci + streamdist + beers, data = acer_sub)
 ```
 
 
 #####Question 2 
 ```{r}
-abies_lm = glm(cover~ elev + tci + disturb, data = abies_sub, family = 'gaussian')
+#abies_ols is the same as abies_simpmod.  It is written using the glm function instead of lm,
+#so the anova function can compare them.  Same is true of acer_ols.
+abies_ols = glm(cover~ elev + tci + disturb, data = abies_sub, family = 'gaussian')
 abies_glm = glm(cover~ elev + tci + disturb, data = abies_sub, family = 'poisson')
 
-acer_lm = glm(cover~ elev + tci + streamdist + beers + elev*tci, data = acer_sub, family = 'gaussian')
+acer_ols = glm(cover~ elev + tci + streamdist + beers + elev*tci, data = acer_sub, family = 'gaussian')
 acer_glm = glm(cover~ elev + tci + streamdist + beers + elev*tci, data = acer_sub, family = 'poisson')
 
 pseudo_r2 = function(glm_mod) {
@@ -327,8 +331,28 @@ pseudo_r2 = function(glm_mod) {
 pseudo_r2(abies_glm)
 pseudo_r2(acer_glm)
 ```
+These pseudo R-squared values are slightly higher than the adjusted R-squared for the previous models.  The models with the poisson error are better fitted to the models.
 
 ```{r}
-anova(abies_glm, abies_lm)
+anova(abies_glm, abies_ols)
+```
+There are 77 more units of cover that are deviant for the ols model than for the glm model.  Therefore, the glm model fits much better.  For acer, (below) the same is true except there are 2194 deviants.
+```{r}
+anova(acer_glm, acer_ols)
 ```
 
+```{r}
+summary(abies_glm)
+```
+The coefficients and p-values stay relatively the same between the glm and ols despite the large difference in deviance values, so OLS is still a good approximate model.
+```{r}
+summary(abies_ols)
+```
+
+#####Question 3
+
+To summarize all of the work done above, since Abies fraseri is a habitat specialist, a model can be built that describes the amount of area this tree will cover based on the elevation, water potential (topographic convergence index), and the disturbance history (particularly whether the site is high in virgin attributes or not).  This model can explain up to 60% of the variation in cover based on these attributes of the given area when error in the model is integer-based.  We can predict whether Abies fraseri would be abundant somewhere if we know the elevation and a few other parameters.  The model for Acer rubrum can only explain 4% of its abundance in different areas because it does not really decide where to live based on the parameters the study measured.  It can live at all sorts of elevations, soil water potentials, distances from streams, and transformed slope aspects.  This model is much less predictive since Acer rubrum is a habitat generalist.  We can conclude that univariate modeling works best when the ecological factor is significant to whether the tree can survive.  We can also conclude that of all of the potential factors, elevation does the best job in explaining the observed abundance of these species.
+
+#####Question 4
+
+The stepAIC function was used above in the exploratory analysis to compare to the chosen method conducted by hand.  The computer and I reached very similar conclusions for the simplified models of both species.
