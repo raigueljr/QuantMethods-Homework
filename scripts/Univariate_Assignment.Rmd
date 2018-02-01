@@ -310,5 +310,25 @@ plot(acer_simpmod)
 
 plot(cover~ elev + tci + streamdist + beers, data = acer_sub)
 ```
-  
+
+
+#####Question 2 
+```{r}
+abies_lm = glm(cover~ elev + tci + disturb, data = abies_sub, family = 'gaussian')
+abies_glm = glm(cover~ elev + tci + disturb, data = abies_sub, family = 'poisson')
+
+acer_lm = glm(cover~ elev + tci + streamdist + beers + elev*tci, data = acer_sub, family = 'gaussian')
+acer_glm = glm(cover~ elev + tci + streamdist + beers + elev*tci, data = acer_sub, family = 'poisson')
+
+pseudo_r2 = function(glm_mod) {
+     1 -  glm_mod$deviance / glm_mod$null.deviance
+}
+
+pseudo_r2(abies_glm)
+pseudo_r2(acer_glm)
+```
+
+```{r}
+anova(abies_glm, abies_lm)
+```
 
