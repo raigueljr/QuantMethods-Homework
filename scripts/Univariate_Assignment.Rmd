@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-###Subset Data
+##Subset Data
 
 This code reads in the dataset and allows me to see what that data looks like.
 ```{r}
@@ -36,6 +36,8 @@ This code makes a plot of the response variable (cover) against one of the expla
 plot(abies_sub$cover~ abies_sub$elev, xlab = 'Elevation', ylab = 'Cover')
 ```
 
+
+##Making the *Abies* Model
 This code is used to see check for interactions between variables.  This chart was not used because it includes non-explanatory variables like species name.
 ```{r}
 pairs(abies_sub, panel=panel.smooth)
@@ -50,9 +52,9 @@ head(abies_expvar)
 pairs(abies_expvar, panel = panel.smooth)
 ```
 
-###Make the maximal model with no interactions
+###Making the maximal model with no interactions
 
-The maximal OLS model includes all 5 possible explanatory variables (elev, tci, streamdist, disturb, and beers).  The Residuals vs. Fitted plot is just okay since there is a bit of a pattern.  2, 14, and 15 are identified as outliers.  The Normal Q-Q plot shows that the model fits okay since the many of the points are on the dashed line.  The same outliers are identified.  The Scale-Location plot shows slight heteroscedasticity to the right and identifies the same outliers.  The Residuals vs. Leverage plot shows 2, 3, and 5 as outliers.  The summary indicates R-squared is 0.5824 and the adjust R-squared is 0.5011.
+The maximal OLS model includes all 5 possible explanatory variables (elev, tci, streamdist, disturb, and beers).  The Residuals vs. Fitted plot is just okay since there is a bit of a pattern.  2, 14, and 15 are identified as outliers.  The Normal Q-Q plot shows that the model fits okay since the many of the points are on the dashed line.  The same outliers are identified.  The Scale-Location plot shows slight heteroscedasticity to the right and identifies the same outliers.  The Residuals vs. Leverage plot shows 2, 3, and 5 as outliers.  The summary indicates R-squared is 0.5824 and the adjusted R-squared is 0.5011.
 ```{r}
 
 abies_modmax = lm(abies_sub$cover ~ abies_sub$elev + abies_sub$tci + abies_sub$streamdist + abies_sub$disturb + abies_sub$beers)
@@ -63,28 +65,29 @@ plot(abies_modmax)
 summary(abies_modmax)
 ```
 
-###Subtract from the maximal model
+###Subtracting from the maximal model
 Since beers has the least significance in the model due to its high p-value, it is removed from the model, and the adjusted R-squared value increases to 0.5146.  This means the model fits the data better when transformed slope aspect is not included.  Because of this, beers is left out.
-```{r}
+```{r error= TRUE}
 abies_modmax_wobeers = update(abies_modmax, ~. -abies_sub$beers)
 
 summary(abies_maxmod_wobeers)
 ```
-
-The next least significant variable is one of the disturb categories.  When it is removed the djusted R-squared goes down, so disturb is left in.  The disturb category with the very low p-value must be significant enough that this variable helps explain cover.
+  
+The next least significant variable is one of the disturb categories.  When it is removed the adjusted R-squared goes down, so disturb is left in.  The disturb category with the very low p-value must be significant enough that this variable helps explain cover.
 ```{r}
 abies_wobeers_wodisturb = update(abies_modmax_wobeers, ~. -abies_sub$disturb)
 
 summary(abies_wobeers_wodisturb)
 ```
-
-Next streamdist is removed because of its high p-value.  The adjusted R-squared increased to 0.5188, so this model fits the data better.  Stream and beers remain out of the simplified model.
+  
+Next, streamdist is removed because of its high p-value.  The adjusted R-squared increased to 0.5188, so this model fits the data better.  Stream and beers remain out of the simplified model.
 ```{r}
 abies_wobeers_wostream = update(abies_modmax_wobeers, ~. -abies_sub$streamdist)
 
 summary(abies_wobeers_wostream)
 ```
-Next tci and elev are each removed.  The R-squared goes down each time, so these variables are returned in the simplified model.
+  
+Next, tci and elev are each removed.  The R-squared goes down each time, so these variables are returned in the simplified model.
 ```{r}
 abies_wobwos_wotci = update(abies_wobeers_wostream, ~. -abies_sub$tci)
 summary(abies_wobwos_wotci)
@@ -94,8 +97,8 @@ summary(abies_wobwos_wotci)
 abies_wobwos_woelev = update(abies_wobeers_wostream, ~. -abies_sub$elev)
 summary(abies_wobwos_woelev)
 ```
-
-The simplified model is the one with beers and streamdist columns variables removed since these are not significant.  Elev is most significant and then the virgin category of disturb followed by the tci.  The plots have not changed much from the maximal model because beers and streamdist were not affecting the model very much.
+  
+The simplified model is the one with beers and streamdist variables removed since these are not significant.  Elev is most significant and then the virgin category of disturb followed by the tci.  The plots have not changed much from the maximal model because beers and streamdist were not affecting the model very much.
 ```{r}
 abies_simpmod = abies_wobeers_wostream
 
@@ -113,43 +116,43 @@ Interactions should only be added if they are significant to the model because t
 summary(update(abies_simpmod, ~. + elev*tci, data = abies_sub))
 
 ```
-The adjusted R-squared value went down and the p-value is high, so this interaction is removed, and the next is added.  The same occurred.
+  
+The adjusted R-squared value went down and the p-value is high, so this interaction is removed, and the next is added.  When the interaction between elev and streamdist was added, the same occurred.
 ```{r}
 summary(update(abies_simpmod, ~. + elev*streamdist, data = abies_sub))
 ```
-
+  
 Again...
 ```{r}
 summary(update(abies_simpmod, ~. + tci*streamdist, data = abies_sub))
 ```
-
+  
 Finally...
 ```{r}
 summary(update(abies_simpmod, ~. + elev*tci*streamdist, data = abies_sub))
 ```
+Because this interaction overly complicates the model, the increase in adjusted R-squared may just be due to the introduction of many explanatory variables, and the most significant variable (elevation) is now the least significant.  My gut tells me that this should be left out.
 
-Because this interaction overly complicates the model, the increase in adjusted R-squared may just be due to the introduction of many explanatory variables, and the most significant variable (elevation) is now the least significant.  This is left out.
-
-###Use AIC
+###Using AIC
 When AIC is used on the maximal model with no interactions, it also drops beers and streamdist, but leaves in disturb.  Since the difference in AIC with and without disturb is less than 2 (0.71), these are equally good models.  Since my earlier analysis showed an increase in R-squared when disturb is left in the model, it will remain.
 ```{r}
 library(MASS)
 stepAIC(abies_modmax)
 ```
-
+  
 Through this analysis abies_simpmod was determined to be the minimal adequate model for Abies fraseri.
 ```{r}
 summary(abies_simpmod)
 
 ```
-
-The p-values in this Anova are the same as those in the summary above.  Except, it lumps disturb together to give the overall significance of disturbance.
+  
+The p-values in the Anova below are the same as those in the summary above.  Except, it lumps disturb together to give the overall significance of disturbance.
 ```{r}
 library(car)
 Anova(abies_simpmod, type=3)
 ```
 
-###Remove outliers
+###Removing outliers
 
 The outliers as identified in the plots are removed from the data, and the summaries are compared.
 ```{r}
@@ -173,8 +176,8 @@ summary(abies_simpmod)
 ```
 The adjusted R-squared value goes up a lot when the outliers are removed and tci and the virgin category of disturb become significant explanatory variables in the model.
 
-#####Making the Acer model
-To make the model of the Acer rubrum data, the same steps were followed.  There was much less correlation identified in this dataset, which makes sense considering this tree is a generalist.
+##Making the *Acer* Model
+To make the model of the *Acer rubrum* data, the same steps were followed.  There was much less correlation identified in this dataset, which makes sense considering this tree is a generalist.
 
 ```{r}
 names(acer_sub)
@@ -183,8 +186,9 @@ head(acer_expvar)
 
 pairs(acer_expvar, panel = panel.smooth)
 ```
-According to this data, there are a few outliers, but the model generally fits okay.  The Normal Q-Q plot shows most of the points on the dashed line.  There is little pattern in the Residualsvs Fitted plot and no heteroscedastity in the Scale-Location plot.  365 has more leverage than the other data, and other outliers are 407 and 306.
-
+  
+According to this data, there are a few outliers, but the model generally fits okay.  The Normal Q-Q plot shows most of the points on the dashed line.  However, there are striped patterns in the Residuals vs. Fitted plot and the Scale-Location plot due to the integer values of cover.  Point 365 has more leverage than the other data, and other outliers include 407 and 306.
+  
 The summary shows some significant p-values, but the adjusted R-squared is very low at 0.03558.  Disturb should be removed first to make a better model.
 ```{r}
 acer_modmax = lm(cover ~ elev + tci + streamdist + disturb + beers, data =acer_sub)
@@ -200,32 +204,33 @@ acer_modmax_wodist = update(acer_modmax, ~. -disturb, data=acer_sub)
 
 summary(acer_modmax_wodist)
 ```
+  
 The adjusted R-square went up, so disturb is left out.  Next, tci is removed.
-
 ```{r}
 acer_wodist_wotci = update(acer_modmax_wodist, ~. -tci, data=acer_sub)
 
 summary(acer_wodist_wotci)
 ```
-The R-squared went down, so this variable is left in.  The rest of the variables have significant p-values, so they should not be removed.  When the significant variable beers is removed, the R-squared goes down a lot.  See below.
+  
+The R-squared went down, so this variable is left in.  The rest of the variables have significant p-values, so they should not be removed.  For example, when the significant variable beers is removed, the R-squared goes down a lot.  See below.
 
 ```{r}
 acer_wodist_wobeers = update(acer_modmax_wodist, ~. -beers, data=acer_sub)
 
 summary(acer_wodist_wobeers)
 ```
-
+    
 The AIC function comes to the same conclusion.  The lowest AIC is achieved when just disturb is removed from the model.
 ```{r}
 library(MASS)
 stepAIC(acer_modmax)
 ```
-
+  
+The interactions identified in the pairs plot are tested to see if they can improve model fit.
 ```{r}
 
 acer_simpmod = acer_modmax_wodist
 
-names(acer_sub)
 acer_expvar = acer_sub[1:nrow(acer_sub), 4:9]
 head(acer_expvar)
 
@@ -236,21 +241,22 @@ summary(acer_simpmod_wint)
 
 ```
 Since the p-value went down, and the adjusted R-squared increased when the interaction between elev and tci was added, this interaction remains.
-
+  
 ```{r}
 acer_simpmod_wint2 = update(acer_simpmod_wint, ~. +elev*streamdist)
 summary(acer_simpmod_wint2)
 ```
 The p-value increased and this interaction is not significant, so it is removed.
+  
 ```{r}
 acer_simpmod_wint3 = update(acer_simpmod_wint, ~. +tci*streamdist)
 summary(acer_simpmod_wint3)
 ```
 The R-squared decreased, the p-value went up, and the interaction is not significant, so it was removed.  The minimal adequate model includes all explanatory variables except disturb and the interaction between elev and tci.
+  
 ```{r}
 acer_simpmod = acer_simpmod_wint
 
-summary(acer_simpmod)
 ```
 
 ```{r}
@@ -258,12 +264,12 @@ library(MASS)
 Anova(acer_simpmod, type =3)
 ```
 Again, the p-values between the summary and Anova functions are the same.
-
+ 
+Because 407 and 410 appear as outliers in 3/4 of the plots and 365 exerts a lot more leverage than other datapoints, these are removed. 
 ```{r}
 par(mfrow = c(2,2))
 plot(acer_simpmod)
 ```
-Because 407 and 410 appear as outliers in 3/4 plots and 365 exerts a lot more leverage than other datapoints, these are removed.
 
 ```{r}
 acer_sub_woout = acer_sub[-c(407, 410, 365),]
@@ -276,9 +282,9 @@ acer_simpmod_woout = lm(cover~ elev + tci + streamdist + beers + elev*tci, data 
 
 summary(acer_simpmod_woout)
 ```
-When these outliers are removed the p-value decreases but the R-squared value also decreases.  The coefficients still barely change.
+When these outliers are removed the p-value decreases, but the R-squared value also decreases.  The coefficients still barely change.
 
-*****Question 1 Answers
+##Question 1 Answers
 ```{r}
 summary(abies_simpmod)
 ```
@@ -287,19 +293,20 @@ summary(abies_simpmod)
 summary(acer_simpmod)
 ```
   
-Since the adjusted R-squared value was 0.5188 even when outliers were included and up to 0.7 when they were removed.  The Abies model seems to explain cover relatively well.  The Acer model does not explain cover well.  While more of the explanatory variables are significant to the model, as shown by the p-values, the model only explains 4% of the variance in the data.  The AIC value is also much lower for the Abies model (44.68) than the Acer model (998.58).  This is another value that indicates the Abies model is a better fit for the data.  This is not surprising because Abies fraseri is a habitat specialist and Acer rubrum is a generalist.  It is easier to predict where Abies fraseri will choose to live because it is pickier.
+Since the adjusted R-squared value was 0.5188 even when outliers were included and up to 0.7 when they were removed, the *Abies* model seems to explain cover relatively well.  The *Acer* model does not explain cover well.  While more of the explanatory variables are significant to the model, as shown by the p-values, the model only explains 4% of the variance in the data.  The AIC value is also much lower for the *Abies* model (44.68) than the *Acer* model (998.58).  This is another value that indicates the *Abies* model is a better fit for the data.  This is not surprising because *Abies fraseri* is a habitat specialist, and *Acer rubrum* is a generalist.  It is easier to predict where *Abies fraseri* will choose to live because it is pickier.
   
-For the Abies model, elevation and whether the area is virgin forest are the most important explanatory variables.  For the Acer model, distance from a stream and the transformed slope aspect are most important.
+For the *Abies* model, elevation and whether the area is virgin forest are the most important explanatory variables.  For the *Acer* model, distance from a stream and the transformed slope aspect are most important.
   
 The main OLS assumptions are listed below.  The plots for each model are below this discussion.
-  *The residuals are normally distributed.
-      *The Q-Q plots for both Abies and Acer show that most of the points are on the dashed line.  This means that the residuals are mostly normally distributed while there are some outliers.
-  *There is a linear response to the driver.
-      *Since one of the exaplanatory variables is categorical (disturb) and the response variable (cover) is only integers (and therefore not continuous), there cannot be a linear response.
-  *Samples are independent.
-      *I am not sure that we can address this issue the way the data was explored here.  Some of the datapoints do have more leverage than others though.
-  *Equal variance (no heteroscedasticity).
-      *The Residuals vs. Fitted and Scale Location plots for the Abies model many of the points closed on the right rather than evenly distributed around the plot.  This indicates that the data is slightly skewed, so there is not entirely equal variance.  The Acer model has even more distinct patterns with lines of points in these plots.  This has occurred because the response variable is in integers.
+
+* The residuals are normally distributed.
+    + The Q-Q plots for both *Abies* and *Acer* show that most of the points are on the dashed line.  This means that the residuals are mostly normally distributed while there are some outliers.
+* There is a linear response to the driver.
+    + Since one of the exaplanatory variables is categorical (disturb) and the response variable (cover) is only integers (and therefore not fully continuous), there cannot be a linear response.
+* Samples are independent.
+    + I am not sure that we can address this issue the way the data was explored here.  Some of the datapoints do have more leverage than others though.
+* Equal variance (no heteroscedasticity).
+    + The Residuals vs. Fitted and Scale Location plots for the *Abies* model have many of the points close together on the right rather than evenly distributed around the plot.  This indicates that the data is slightly skewed, so there is not entirely equal variance.  The Acer model has even more distinct patterns with lines of points in these plots.  This has occurred because the response variable is in integers.
       
 ```{r}
 par(mfrow = c(2,2))
@@ -314,10 +321,11 @@ plot(acer_simpmod)
 ```
 
 
-#####Question 2 
+##Question 2 
+  
+The OLS models are compared to models that assume residuals to be on a Poisson distribution as opposed to the Gaussian distribution.  This should be a better fit since cover was measured in integers.
 ```{r}
-#abies_ols is the same as abies_simpmod.  It is written using the glm function instead of lm,
-#so the anova function can compare them.  Same is true of acer_ols.
+#abies_ols is the same as abies_simpmod.  It is written using the glm function instead of lm, so the anova function can compare them.  Same is true of acer_ols.
 abies_ols = glm(cover~ elev + tci + disturb, data = abies_sub, family = 'gaussian')
 abies_glm = glm(cover~ elev + tci + disturb, data = abies_sub, family = 'poisson')
 
@@ -332,7 +340,8 @@ pseudo_r2(abies_glm)
 pseudo_r2(acer_glm)
 ```
 These pseudo R-squared values are slightly higher than the adjusted R-squared for the previous models.  The models with the poisson error are better fitted to the models.
-
+  
+The deviance of the two models is directly compared.
 ```{r}
 anova(abies_glm, abies_ols)
 ```
@@ -344,15 +353,24 @@ anova(acer_glm, acer_ols)
 ```{r}
 summary(abies_glm)
 ```
-The coefficients and p-values stay relatively the same between the glm and ols despite the large difference in deviance values, so OLS is still a good approximate model.
+
 ```{r}
 summary(abies_ols)
 ```
 
-#####Question 3
+```{r}
+summary(acer_glm)
+```
 
-To summarize all of the work done above, since Abies fraseri is a habitat specialist, a model can be built that describes the amount of area this tree will cover based on the elevation, water potential (topographic convergence index), and the disturbance history (particularly whether the site is high in virgin attributes or not).  This model can explain up to 60% of the variation in cover based on these attributes of the given area when error in the model is integer-based.  We can predict whether Abies fraseri would be abundant somewhere if we know the elevation and a few other parameters.  The model for Acer rubrum can only explain 4% of its abundance in different areas because it does not really decide where to live based on the parameters the study measured.  It can live at all sorts of elevations, soil water potentials, distances from streams, and transformed slope aspects.  This model is much less predictive since Acer rubrum is a habitat generalist.  We can conclude that univariate modeling works best when the ecological factor is significant to whether the tree can survive.  We can also conclude that of all of the potential factors, elevation does the best job in explaining the observed abundance of these species.
 
-#####Question 4
-
-The stepAIC function was used above in the exploratory analysis to compare to the chosen method conducted by hand.  The computer and I reached very similar conclusions for the simplified models of both species.
+```{r}
+summary(acer_ols)
+```
+The coefficients and p-values stay relatively the same between the glm and ols despite the large difference in deviance values, so OLS is still a good approximate model.
+   
+##Question 3
+To summarize all of the work done above, since Abies fraseri is a habitat specialist, a model can be built that describes the amount of area this tree will cover based on the elevation, water potential (topographic convergence index), and the disturbance history (particularly whether the site is high in virgin attributes or not).  This model can explain up to 60% of the variation in cover based on these attributes of the given area when error in the model is integer-based.  We can predict whether *Abies fraseri* would be abundant somewhere if we know the elevation and a few other parameters.  The model for *Acer rubrum* can only explain 4% of its abundance in different areas because it does not really decide where to live based on the parameters the study measured.  It can live at all sorts of elevations, soil water potentials, distances from streams, and transformed slope aspects.  This model is much less predictive since *Acer rubrum* is a habitat generalist.  We can conclude that univariate modeling works best when the ecological factor is significant to whether the tree can survive.  We can also conclude that of all of the potential factors, elevation does the best job in explaining the observed abundance of these species.
+  
+##Question 4
+The stepAIC function was used above in the exploratory analysis to compare this method to the chosen method conducted by hand.  The computer and I reached very similar conclusions for the simplified models of both species.
+  
