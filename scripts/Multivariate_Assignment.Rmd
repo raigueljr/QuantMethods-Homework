@@ -1,0 +1,11 @@
+---
+title: "Multivariate_Assignment"
+author: "Julie Raiguel"
+date: "February 8, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
