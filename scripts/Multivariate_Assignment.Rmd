@@ -11,15 +11,23 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(vegan)
+library(dummies)
+
+source('https://raw.githubusercontent.com/dmcglinn/quant_methods/gh-pages/scripts/utility_functions.R')
+
 data(dune)
 data(dune.env)
 ?dune
 ```
 
 ```{r}
-summary(dune)
-summary(dune.env)
+head(dune)
+head(dune.env)
+
+dune_mds = metaMDS(dune)
+
 ```
+
 
 
 ```{r}
@@ -33,3 +41,8 @@ plot(dune_mds, type='n')
         col=color_vect, pch=19)
 ```
 
+
+```{r}
+cca_dune = cca(dune ~ ., data=dune.env)
+RsquareAdj(cca_dune)
+```
