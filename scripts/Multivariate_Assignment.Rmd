@@ -9,9 +9,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+##Code for Question 1
+Here I load the package vegan because its functions are commonly used in ordination.  I also load the data frame dune, which tells the abundance of species in 20 sites, and the data frame dune.env, which tells some environmental conditions at those sites.
 ```{r}
 library(vegan)
-library(dummies)
 
 source('https://raw.githubusercontent.com/dmcglinn/quant_methods/gh-pages/scripts/utility_functions.R')
 
@@ -20,6 +21,7 @@ data(dune.env)
 ?dune
 ```
 
+I look at the data to see if the row names line up between the abundance and explanatory matrices.  The sites are labeled 1 through 20 and are listed in that order in both data frames.  Then I run an NMDS analysis on abundance data frame.  This method is an Unconstrained approach because it does not use an explanatory matrix.  Additionally, it does not use eigenvalues.  It repeats random iterations to find the model with the lowest possible stress value.
 ```{r}
 head(dune)
 head(dune.env)
@@ -29,26 +31,42 @@ dune_mds = metaMDS(dune)
 ```
 
 
-
+I plot the NMDS model.  The species names are written and the dots indicate the 20 sites.  The color of the dots indicates their moisture value.
 ```{r}
 plot(dune_mds, type='n')
- text(dune_mds, 'sp', cex=.5)
- # generate vector of colors 
+ text(dune_mds, 'sp', cex=0.75)
  color_vect = rev(terrain.colors(6))[-1]
  points(dune_mds, 'sites', pch=19, 
         col=color_vect[dune.env$Moisture])
  legend('topright', paste("Moisture =", 1:5, sep=''), 
         col=color_vect, pch=19)
 ```
+##Answers to Question 1
+
+*  Describe how you interpret the graphic.
+  + This graphic shows two axes of variation.  The species are relatively randomly scattered across both the vertical and horizontal axes.  I intepret this to mean that that many different species of dune vegetation have varying preferences for environmental conditions.
+  + However, some are clumped together, like *Lolium perenne* (Lolpere) and *Poa pratensis* (Poaprat) towards the left and *Eleocharis palustris* (Eleopalu) and *Ranunculus flammula* (Ranuflam) towards the right.  Each species in the pair likes similar conditions to the other since there are together in the model.  The pairs themselves are far apart horizontally so they like very different conditions in the spectrum indicated by that axis but are closer together vertically, so their tolerated differences in that variable are less extreme.
+  + Since the moisture of the sites is overlayed on the unconstrained plot, we can see a gradient of moisture moving horizontally based on the colors.  Farther to the left, near the pink dots, are species that like drier sites (including *Lolium perenne* and *Poa pratensis*).  Farther to the right, near the green dots, are the species that like wet sites (including *Eleocharis palustris* and *Ranunculus flammula*).  The gradient of colors created by the site indicators indicates that moisture may be the primary axis of this model.  
+  + The secondary axis is unknown because no other explanatory variable is overlayed, and I do not know enough about these species to develop any hypotheses about what is very different about the sites preferred by *Empetrum nigrum* (Empenigr) and *Cirsium arvense* (Cirsarve), which appear to like the same moisture level.
+* What is the goal of creating such a plot?
+  + The goal of creating the plot in general is to see what species clump together and to form any hypotheses about what causes this in the model.  
+  + This particular plot includes the explanatory variable of moisture overlayed on top of the unconstrained model.  The purpose of that is to test a hypothesis that moisture may be the primary axis in this model.  This plot helps the researcher to decide whether moisture may explain variance in this model.
+* Does this analysis suggest any interesting findings with respect to dune vegetation?
+  + This analysis does not show a lot of clumping.  Many of the dune species seem to have their own unique preferences of environmental conditions.
+  + It also shows that moisture level is very important in determining which species will live where.
+  + While dune habitats seem to be all the same to the casual observer, there is a great variety of species specialized to live in many different types of sites.
 
 
+##Code for Question 2
+
+I create a model using Canonical Correspondence Analysis (CCA).  In this model, I include all available explantory variables in dune.env.  At first the R-squared value looks awesome since the model explains 71% of the variance.  However, the adjusted R-squared shows that much of that was randomly expected since so many variables were included.  The model actually only explains 23% of the variance.
 ```{r}
 cca_dune = cca(dune ~ ., data=dune.env)
-RsquareAdj(cca_dune)
+cca_dune
 ```
 
 ```{r}
-cca_dune
+RsquareAdj(cca_dune)
 ```
 ```{r}
 dune.env
@@ -79,6 +97,11 @@ RsquareAdj(cca_dune)
 ```
 
 ```{r}
+anova(cca_dune, by='margin', permutations = 100)
+```
+
+
+```{r}
 cca_dune_moisture = cca(dune ~ Moisture, data=dune.env)
 cca_dune_moisture
 RsquareAdj(cca_dune_moisture)
@@ -87,6 +110,27 @@ RsquareAdj(cca_dune_moisture)
 ```{r}
 plot(cca_dune_moisture)
 ```
+
+```{r}
+cca_dune_Management = cca(dune ~ Management, data = dune.env)
+cca_dune_Management
+RsquareAdj(cca_dune_Management)
+```
+
+```{r}
+plot(cca_dune_Management)
+```
+
+```{r}
+cca_dune_A1 =  cca(dune ~ A1, data=dune.env)
+cca_dune_A1
+RsquareAdj(cca_dune_A1)
+```
+
+```{r}
+plot(cca_dune_A1)
+```
+
 
 ```{r}
 cca_dune_manure = cca(dune ~ Manure, data=dune.env)
@@ -98,38 +142,30 @@ plot(cca_dune_manure)
 ```
 
 ```{r}
-cca_dune_A1 =  cca(dune ~ A1, data=dune.env)
-cca_dune_A1
-RsquareAdj(cca_dune_A1)
-```
-```{r}
-cca_dune_A1_Moist = cca(dune ~ A1 + Moisture, data = dune.env)
-cca_dune_A1_Moist
-RsquareAdj(cca_dune_A1_Moist)
-```
-```{r}
-plot(cca_dune_A1_Moist)
-```
-
-```{r}
-cca_dune_A1Moist_Manure = cca(dune ~ A1 + Moisture + Manure, data = dune.env)
-cca_dune_A1Moist_Manure
-RsquareAdj(cca_dune_A1Moist_Manure)
-```
-
-```{r}
-plot(cca_dune_A1Moist_Manure)
-```
-
-```{r}
 cca_dune_Use = cca(dune ~ Use, data = dune.env)
 cca_dune_Use
 RsquareAdj(cca_dune_Use)
 ```
 
+
 ```{r}
-cca_dune_Management = cca(dune ~ Management, data = dune.env)
-cca_dune_Management
-RsquareAdj(cca_dune_Management)
+cca_dune_Manag_Moist = cca(dune ~ Management + Moisture, data = dune.env)
+cca_dune_Manag_Moist
+RsquareAdj(cca_dune_Manag_Moist)
 ```
+```{r}
+plot(cca_dune_Manag_Moist)
+```
+
+```{r}
+cca_dune_ManagMoist_Manure = cca(dune ~ Management + Moisture + Manure, data = dune.env)
+cca_dune_ManagMoist_Manure
+RsquareAdj(cca_dune_ManagMoist_Manure)
+```
+
+```{r}
+plot(cca_dune_ManagMoist_Manure)
+```
+
+
 
