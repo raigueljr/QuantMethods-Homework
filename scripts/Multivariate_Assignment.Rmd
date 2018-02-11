@@ -41,9 +41,20 @@ plot(dune_mds, type='n')
  legend('topright', paste("Moisture =", 1:5, sep=''), 
         col=color_vect, pch=19)
 ```
+When the same plot is made with the manure rankings, there appears to be a vertical gradient, but it is not nearly as strong as the moisture one.
+```{r}
+plot(dune_mds, type='n')
+ text(dune_mds, 'sp', cex=0.75)
+ color_vect = rev(terrain.colors(6))[-1]
+ points(dune_mds, 'sites', pch=19, 
+        col=color_vect[dune.env$Manure])
+ legend('topright', paste("Manure =", 0:4, sep=''), 
+        col=color_vect, pch=19)
+```
+
 ##Answers to Question 1
 
-*  Describe how you interpret the graphic.
+*  Describe how you interpret the [moisture] graphic.
   + This graphic shows two axes of variation.  The species are relatively randomly scattered across both the vertical and horizontal axes.  I intepret this to mean that that many different species of dune vegetation have varying preferences for environmental conditions.
   + However, some are clumped together, like *Lolium perenne* (Lolpere) and *Poa pratensis* (Poaprat) towards the left and *Eleocharis palustris* (Eleopalu) and *Ranunculus flammula* (Ranuflam) towards the right.  Each species in the pair likes similar conditions to the other since there are together in the model.  The pairs themselves are far apart horizontally so they like very different conditions in the spectrum indicated by that axis but are closer together vertically, so their tolerated differences in that variable are less extreme.
   + Since the moisture of the sites is overlayed on the unconstrained plot, we can see a gradient of moisture moving horizontally based on the colors.  Farther to the left, near the pink dots, are species that like drier sites (including *Lolium perenne* and *Poa pratensis*).  Farther to the right, near the green dots, are the species that like wet sites (including *Eleocharis palustris* and *Ranunculus flammula*).  The gradient of colors created by the site indicators indicates that moisture may be the primary axis of this model.  
@@ -57,24 +68,23 @@ plot(dune_mds, type='n')
   + While dune habitats seem to be all the same to the casual observer, there is a great variety of species specialized to live in many different types of sites.
 
 
-##Code for Question 2
+##Code and Answers for Question 2
 
-I create a model using Canonical Correspondence Analysis (CCA).  In this model, I include all available explantory variables in dune.env.  At first the R-squared value looks awesome since the model explains 71% of the variance.  However, the adjusted R-squared shows that much of that was randomly expected since so many variables were included.  The model actually only explains 23% of the variance.
+I create a model using Canonical Correspondence Analysis (CCA).  In this model, I include all available explantory variables in dune.env.  At first, the Proportion and R-squared value looks awesome since the model explains 71% of the variance.  However, the adjusted R-squared shows that much of that was randomly expected since so many variables were included.  The explanatory variables actually only explain 23% of the variance.
 ```{r}
 cca_dune = cca(dune ~ ., data=dune.env)
 cca_dune
 ```
-
 ```{r}
 RsquareAdj(cca_dune)
 ```
-```{r}
-dune.env
-```
-
-
+This first plot is a mess because all of the variables were treated as categorical except A1.
 ```{r}
 plot(cca_dune)
+```
+To fix this, I check to see which variables should be categorical (Management and Use).  Manure and Moisture are separated into ranks (1-5 and 0-4) respectively, but because these increase and decrease with the variable they can be changed to integers.
+```{r}
+dune.env
 ```
 
 ```{r}
@@ -83,24 +93,27 @@ dune.env$Moisture = as.integer(dune.env$Moisture)
 
 class(dune.env$A1)
 
-class(dune.env$manure)
+class(dune.env$Manure)
 dune.env$Manure = as.integer(dune.env$Manure)
+```
 
-
+In this new plot, moisture and manure have their own axes and it is much less cluttered.  Moisture appears to be the strongest variable along the horizontal axis and manure the strongest along the vertical axis.
+```{r}
 cca_dune = cca(dune ~ ., data=dune.env)
 plot(cca_dune)
 ```
 
+Now that these variables have been changed to integers, the number of constrained axes decreased from 12 to 8.  This meant a drop in R-squared to 57% but an increase in adjusted R-sqaured to 27.5%.
 ```{r}
 cca_dune
 RsquareAdj(cca_dune)
 ```
-
+Moisture is found to be the most significant of the explanatory variables when an anova is run.  This is unsurprising considering it is most correlated with the primary axis (CCA1) and that axis accounts for 38% (0.4601/1.2128) of the variance explained by the constrained axes.
 ```{r}
 anova(cca_dune, by='margin', permutations = 100)
 ```
 
-
+Moisture is tested as the only constrained axis.  The adjusted R-squared decreased to 15%, but it is much closer to the R-squared value, so little of the explanation is randomly expected.  This plot is most similar to the NMDS plot.  For example, species like *Eleocharus palustris* and *Ranunculus flammula* are still together on the right where sites with more moisture are located.  However, the distribution of species along the vertical axis is different.
 ```{r}
 cca_dune_moisture = cca(dune ~ Moisture, data=dune.env)
 cca_dune_moisture
@@ -110,17 +123,17 @@ RsquareAdj(cca_dune_moisture)
 ```{r}
 plot(cca_dune_moisture)
 ```
-
+Management has the next lowest p-value.  The adjusted R-squared is not much lower than that for moisture but there is a much greater difference between this and the unadjusted R-squared.
 ```{r}
 cca_dune_Management = cca(dune ~ Management, data = dune.env)
 cca_dune_Management
 RsquareAdj(cca_dune_Management)
 ```
-
+This plot is a little different. Instead looking at a gradient across the plot in a certain direction, species clumped near each category of Management seem to prefer that managment type.  For example, *Bromus hordaceus* (Bromhord) appears to prefer sites where hobby farming occurs.
 ```{r}
 plot(cca_dune_Management)
 ```
-
+Since the p-value of A1 is nearly double that of Management, the difference between the R-squared and adjusted R-squared has nearly doubled as well.
 ```{r}
 cca_dune_A1 =  cca(dune ~ A1, data=dune.env)
 cca_dune_A1
@@ -131,23 +144,26 @@ RsquareAdj(cca_dune_A1)
 plot(cca_dune_A1)
 ```
 
-
+A model using just manure as a constrained axis shows a slightly higher adjusted R-squared than for A1.  This makes sense considering the vertical component of the manure axis was longer than the horizontal axis of the A1 component in the original model.
 ```{r}
 cca_dune_manure = cca(dune ~ Manure, data=dune.env)
 cca_dune_manure
 RsquareAdj(cca_dune_manure)
 ```
+
+When compared to the CCA plot that included all of the variables, this plot isturned about 90 degrees.  For example, *Salix repens* (Salirepe) was at the top of the plot before and is now at the left.  This is because manure was a large indicator of the vertical axis and it is now along the horizontal axis.  In both cases, *Salix repens* was shown to like low levels of manure.
 ```{r}
 plot(cca_dune_manure)
 ```
 
+Finally, Use, which had a very high p-value does little to explain variance in the data.  It's adjusted R-squared is only 1.9.
 ```{r}
 cca_dune_Use = cca(dune ~ Use, data = dune.env)
 cca_dune_Use
 RsquareAdj(cca_dune_Use)
 ```
 
-
+To confirm understanding of the above analysis, a model with Management and moisture as constrained axes and a model with manure added to those were compared.
 ```{r}
 cca_dune_Manag_Moist = cca(dune ~ Management + Moisture, data = dune.env)
 cca_dune_Manag_Moist
@@ -167,5 +183,18 @@ RsquareAdj(cca_dune_ManagMoist_Manure)
 plot(cca_dune_ManagMoist_Manure)
 ```
 
+In this comparison, the R-squared value went up very little, most likely just because of the additional variable.  The adjusted R-squared value decreased very little, also due to the added variable.  However, the location of the species with respect to each other and moisture and management in the plots changed very little.  This reaffirms that manure is not very significant to this model.
+
+##Answers to Question 3
+
+*Do these two analyses seem to be suggesting different take home messages?
+  + The take home message of both of these analyses is the same: moisture is the most significant variable in explaining the locations of the different species of dune vegetation.  
+  + The NMDS is an unconstrained analysis that uses Bray-Curtis distances.  However, when mositure levels of the different sites are overlayed on the plot of this model, it is obvious that moisture is key in the primary axis.  
+  + The CCA model does use a constrained analysis with an explanatory matrix and chi-squared distances.  In this model, other constrained axes were tested, but moisture was the only one that was significant.  Additionally, when the model was tested only with moisture as an explanatory variable, it had the highest adjusted R-squared (as compared to other tests at the scale of individual explanatory variables).  Therefore, the take home message is the same.
+
+
+*Which analysis do you find to be more useful?
+  + I find the CCA analysis more useful because there are more statistics to work with.  The NMDS approach is very visible.  The horizontal moisture gradient is clear.  However, in the CCA analysis, the significance of the variables can be compared using p-values and adjusted R-squared numbers.
+  + Additionally, since I know little about these species, it would be hard to work with an unconstrained analysis.
 
 
