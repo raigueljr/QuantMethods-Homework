@@ -46,3 +46,23 @@ plot(dune_mds, type='n')
 cca_dune = cca(dune ~ ., data=dune.env)
 RsquareAdj(cca_dune)
 ```
+
+```{r}
+cca_dune
+```
+```{r}
+dune.env
+```
+
+
+```{r}
+plot(cca_dune)
+```
+
+```{r}
+class(dune.env$Moisture)
+as.numeric(dune.env$Moisture)
+
+
+```
+
