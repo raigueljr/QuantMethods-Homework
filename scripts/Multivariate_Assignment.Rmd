@@ -61,8 +61,75 @@ plot(cca_dune)
 
 ```{r}
 class(dune.env$Moisture)
-as.numeric(dune.env$Moisture)
+dune.env$Moisture = as.integer(dune.env$Moisture)
+
+class(dune.env$A1)
+
+class(dune.env$manure)
+dune.env$Manure = as.integer(dune.env$Manure)
 
 
+cca_dune = cca(dune ~ ., data=dune.env)
+plot(cca_dune)
+```
+
+```{r}
+cca_dune
+RsquareAdj(cca_dune)
+```
+
+```{r}
+cca_dune_moisture = cca(dune ~ Moisture, data=dune.env)
+cca_dune_moisture
+RsquareAdj(cca_dune_moisture)
+```
+
+```{r}
+plot(cca_dune_moisture)
+```
+
+```{r}
+cca_dune_manure = cca(dune ~ Manure, data=dune.env)
+cca_dune_manure
+RsquareAdj(cca_dune_manure)
+```
+```{r}
+plot(cca_dune_manure)
+```
+
+```{r}
+cca_dune_A1 =  cca(dune ~ A1, data=dune.env)
+cca_dune_A1
+RsquareAdj(cca_dune_A1)
+```
+```{r}
+cca_dune_A1_Moist = cca(dune ~ A1 + Moisture, data = dune.env)
+cca_dune_A1_Moist
+RsquareAdj(cca_dune_A1_Moist)
+```
+```{r}
+plot(cca_dune_A1_Moist)
+```
+
+```{r}
+cca_dune_A1Moist_Manure = cca(dune ~ A1 + Moisture + Manure, data = dune.env)
+cca_dune_A1Moist_Manure
+RsquareAdj(cca_dune_A1Moist_Manure)
+```
+
+```{r}
+plot(cca_dune_A1Moist_Manure)
+```
+
+```{r}
+cca_dune_Use = cca(dune ~ Use, data = dune.env)
+cca_dune_Use
+RsquareAdj(cca_dune_Use)
+```
+
+```{r}
+cca_dune_Management = cca(dune ~ Management, data = dune.env)
+cca_dune_Management
+RsquareAdj(cca_dune_Management)
 ```
 
