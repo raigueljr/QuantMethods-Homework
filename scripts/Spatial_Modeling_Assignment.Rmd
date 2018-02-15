@@ -1,0 +1,82 @@
+---
+title: "Spatial_Modeling_Assignment"
+author: "Julie Raiguel"
+date: "February 15, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(vegan)
+data(BCI)
+## UTM Coordinates (in metres)
+BCI_xy = data.frame(x = rep(seq(625754, 626654, by=100), each=5), y = rep(seq(1011569,  1011969, by=100), len=50))
+```
+
+```{r}
+head(BCI)
+nrow(BCI)
+
+head(BCI_xy)
+nrow(BCI_xy)
+```
+
+```{r}
+plot(BCI_xy)
+```
+
+```{r}
+BCI_richness = apply(BCI, 1, function(x) sum(x > 0))
+hist(BCI_richness)
+```
+
+```{r}
+col_brks = hist(BCI_richness, plot=F)$breaks
+col_indices = as.numeric(cut(BCI_richness, col_brks))
+cols = rev(terrain.colors(length(col_brks)))
+plot(BCI_xy, cex=2, pch=19, col=cols[col_indices])
+```
+
+```{r}
+sum_species = sapply(BCI, sum)
+
+boxplot(sum_species)
+
+quantile(sum_species, 0.50)
+
+```
+
+
+```{r}
+rare_sp = BCI
+
+for (i in 1:ncol(BCI)) {
+  sp_abundance = sum(BCI[ , i])
+  if(sp_abundance > 25) {
+    print(colnames(BCI)[i])
+    rare_sp = rare_sp[, -i]
+  }
+}  
+
+ncol(rare_sp)
+
+
+```
+
+```{r}
+common_sp = BCI
+
+for (i in 1:ncol(BCI)) {
+  sp_abundance = sum(BCI[ , i])
+  if(sp_abundance < 25) {
+    print(colnames(BCI)[i])
+    common_sp = common_sp[, -i]
+  }
+}  
+
+ncol(common_sp)
+```
+
