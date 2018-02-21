@@ -164,7 +164,25 @@ colnames(predict_sp)
 
 
 ```{r}
+sp_glm= glm(Drypetes.standleyi~ Cordia.lasiocalyx +  Hirtella.triandra + Picramnia.latifolia + Quassia.amara + Tabernaemontana.arborea + Trattinnickia.aspera + Xylopia.macrantha, data = predict_sp, family = 'poisson')
 
+sp_glm
 
+pseudo_r2 = function(glm_mod) {
+     1 -  glm_mod$deviance / glm_mod$null.deviance
+}
+
+pseudo_r2(sp_glm)
+```
+
+```{r}
+tratt_glm= glm(Drypetes.standleyi~  Trattinnickia.aspera, data = predict_sp, family = 'poisson')
+
+tratt_glm
+
+pseudo_r2(tratt_glm)
+```
+```{r}
+anova(sp_glm, tratt_glm)
 ```
 
