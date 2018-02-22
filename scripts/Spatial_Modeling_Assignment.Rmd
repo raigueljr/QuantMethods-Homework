@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ##Question 1
 ```{r}
 library(vegan)
+source('https://raw.githubusercontent.com/dmcglinn/quant_methods/gh-pages/scripts/utility_functions.R')
+
 data(BCI)
 ## UTM Coordinates (in metres)
 BCI_xy = data.frame(x = rep(seq(625754, 626654, by=100), each=5), y = rep(seq(1011569,  1011969, by=100), len=50))
@@ -164,25 +166,64 @@ colnames(predict_sp)
 
 
 ```{r}
-sp_glm= glm(Drypetes.standleyi~ Cordia.lasiocalyx +  Hirtella.triandra + Picramnia.latifolia + Quassia.amara + Tabernaemontana.arborea + Trattinnickia.aspera + Xylopia.macrantha, data = predict_sp, family = 'poisson')
+spatial_data = data.frame(predict_sp, BCI_xy)
 
-sp_glm
+sp_gls = gls(Drypetes.standleyi~ Cordia.lasiocalyx +  Hirtella.triandra + Picramnia.latifolia + Quassia.amara + Tabernaemontana.arborea + Trattinnickia.aspera + Xylopia.macrantha, data = spatial_data)
 
-pseudo_r2 = function(glm_mod) {
-     1 -  glm_mod$deviance / glm_mod$null.deviance
-}
+summary(sp_gls)
 
-pseudo_r2(sp_glm)
 ```
 
 ```{r}
-tratt_glm= glm(Drypetes.standleyi~  Trattinnickia.aspera, data = predict_sp, family = 'poisson')
+xylopia_gls= gls(Drypetes.standleyi~  Xylopia.macrantha, data = spatial_data)
 
-tratt_glm
+summary(xylopia_gls)
 
-pseudo_r2(tratt_glm)
 ```
+
+
 ```{r}
-anova(sp_glm, tratt_glm)
+plot(Variogram(sp_gls, form = ~ x + y))
+
+sp_exp = update(sp_gls, 
+                     corr=corExp(form=~x + y,
+                                 nugget=T)) 
+
+plot(Variogram(sp_exp, resType = 'normalized'))
+
+```
+
+```{r}
+plot(Variogram(xylopia_gls, form= ~x + y))
+```
+
+
+```{r}
+xylopia_exp = update(xylopia_gls, 
+                     corr=corExp(form=~x + y)) 
+
+plot(Variogram(xylopia_exp))
+
+plot(Variogram(xylopia_exp, resType='normalized'))
+```
+
+
+```{r}
+anova(sp_gls, sp_exp)
+
+```
+
+```{r}
+summary(sp_gls)
+summary(sp_exp)
+```
+
+```{r}
+anova(xylopia_gls, xylopia_exp)
+```
+
+```{r}
+summary(xylopia_gls)
+summary(xylopia_exp)
 ```
 
