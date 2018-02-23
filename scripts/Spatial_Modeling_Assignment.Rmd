@@ -10,17 +10,21 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ##Question 1
+Gather data and packages.
 ```{r}
 library(vegan)
+library(nlme)
 source('https://raw.githubusercontent.com/dmcglinn/quant_methods/gh-pages/scripts/utility_functions.R')
 
 data(BCI)
 ## UTM Coordinates (in metres)
 BCI_xy = data.frame(x = rep(seq(625754, 626654, by=100), each=5), y = rep(seq(1011569,  1011969, by=100), len=50))
 ```
-
+  
+Look at data that is given and make sure the sites line up.
 ```{r}
-head(BCI)
+BCI[6,1:2]
+ncol(BCI)
 nrow(BCI)
 
 head(BCI_xy)
@@ -30,19 +34,22 @@ nrow(BCI_xy)
 ```{r}
 plot(BCI_xy)
 ```
-
+  
+See if there is variation in the number of the species at the sites.
 ```{r}
 BCI_richness = apply(BCI, 1, function(x) sum(x > 0))
 hist(BCI_richness)
 ```
-
+  
+Look for clustering of sites with similar richness together.  There is not too much clustering, but the pink dots tend to be near each other.
 ```{r}
 col_brks = hist(BCI_richness, plot=F)$breaks
 col_indices = as.numeric(cut(BCI_richness, col_brks))
 cols = rev(terrain.colors(length(col_brks)))
 plot(BCI_xy, cex=2, pch=19, col=cols[col_indices])
 ```
-
+  
+Find the median abundance of the species.
 ```{r}
 sum_species = sapply(BCI, sum)
 
@@ -51,8 +58,8 @@ boxplot(sum_species)
 quantile(sum_species, 0.50)
 
 ```
-
-
+  
+Declare those with abundance less than the median as rare (except ones with only one individual because single samples cannot be analyzed for spatial patterns).
 ```{r}
 rare_sp = BCI
 
@@ -66,9 +73,9 @@ for (i in ncol(BCI):1) {
 
 ncol(rare_sp)
 
-
 ```
-
+  
+Declare those species with an abundance higher than the median as common.
 ```{r}
 common_sp = BCI
 
@@ -82,43 +89,47 @@ for (i in ncol(BCI):1) {
 
 ncol(common_sp)
 ```
-
 ```{r}
-ncol(BCI)
-```
-```{r}
-head(common_sp)
-head(rare_sp)
+common_sp[,1:3]
+rare_sp[,1:3]
 ```
 ```{r}
 xy_dist = dist(BCI_xy)
 comm_dist = vegdist(common_sp)
 rare_dist = vegdist(rare_sp)
 ```
-
+  
+The nonlinear model shows a stronger influence of spatial distribution at shorter distances.  Generally, since the slope is not equal to 0, there appears to be some evidence of spatial dependence for the common species.
 ```{r}
+max_dist = max(xy_dist) / 2
 plot(xy_dist, comm_dist)
 abline(lm(comm_dist ~ xy_dist), lwd=3, col='red')
 lines(lowess(xy_dist, comm_dist), lwd=3, col='green')
-
+abline(v = max_dist, col='red', lwd=3, lty=2)
 ```
-
+  
+Both the linear and nonlinear models for the rare species are flatter than the lines for the common species.  This indicates that variance does not increase as much with distance, and therefore, there is less spatial dependence.  The nonlinear model shows that at further distances there may be no spatial dependence.
 ```{r}
+
 plot(xy_dist, rare_dist)
 abline(lm(rare_dist ~ xy_dist), lwd=3, col='red')
 lines(lowess(xy_dist, rare_dist), lwd=3, col='green')
+abline(v = max_dist, col='red', lwd=3, lty=2)
 ```
-
+  
+The mantel statistic can be used to demonstrate the same trend that was seen above.  It is based on the linear models shown above.  It uses random permutations to create a null model and compares the observed distances to that model.  In this case the mantel statistic is 0.405 for the common species.
 ```{r}
 comm_mantel = mantel(xy_dist, comm_dist)
 comm_mantel
 ```
-
+  
+For the rare species, the mantel statistic is only 0.2259.  Since this is closer to 0, as it would be if it were the same as the null model, there is less spatial dependence present for the rare species in this dataset.
 ```{r}
 rare_mantel = mantel(xy_dist, rare_dist)
 rare_mantel
 ```
-
+  
+This can be further investigated with a correlogram analysis.
 ```{r}
 comm_corlog = mantel.correlog(comm_dist, xy_dist)
 rare_corlog = mantel.correlog(rare_dist, xy_dist)
@@ -129,18 +140,21 @@ comm_corlog
 ```{r}
 rare_corlog
 ```
-
+  
+Correlograms indicate autocorrelation.  The filled in points are significant.  For both of the plots, the significant points on the left side of the maximum distance for analysis are both greater than zero and all the way to the left.  This indicates that there is positively correlated spatial dependence at the sites which are closest together.  Once further away, the spatial dependence is not significant.  This is the same trend indicated by the flattening of the lines in the plots above.  Also, while the mantel statistics are positive and significant for both groups of species, these points are higher for the common species, indicating that there is more spatial dependence for this group than the rare species.
 ```{r}
 par(mfrow=c(1,2))
 plot(rare_corlog)
 mtext(side=3, 'Rare Species')
+abline(v = max_dist, col='red', lwd=3, lty=2)
 
 plot(comm_corlog)
-mtext(side=3, 'Community Species')
-
+mtext(side=3, 'Common Species')
+abline(v = max_dist, col='red', lwd=3, lty=2)
 ```
+  
 ##Question 2
-
+A matrix is made with just the explanatory and response species.
 ```{r}
 predict_sp = BCI
 
@@ -164,7 +178,7 @@ colnames(predict_sp)
 ```
 
 
-
+A dataframe is made that combines these species' abundance data with the location data for the sites.  A generalized least squares model is made with all of the species as explantory variables.  The model does not appear to be the best fit because the AIC value is relatively high at 307.  Two of the explanatory species have significant p-values, but *Xylopia macrantha* has the smallest at 0.0006, (*Cordia lasiocalyx* has a p-value of 0.0415) so that is the species used as the explanatory variable in the individual model.
 ```{r}
 spatial_data = data.frame(predict_sp, BCI_xy)
 
@@ -172,8 +186,9 @@ sp_gls = gls(Drypetes.standleyi~ Cordia.lasiocalyx +  Hirtella.triandra + Picram
 
 summary(sp_gls)
 
-```
 
+```
+A model for the abundance of *Drypetes standleyi* is made with only the abundance of *Xylopia macratha* as the explanatory variable.  The AIC increased to 338, so this model is an even worse fit than the one with all of the species included.
 ```{r}
 xylopia_gls= gls(Drypetes.standleyi~  Xylopia.macrantha, data = spatial_data)
 
@@ -181,49 +196,61 @@ summary(xylopia_gls)
 
 ```
 
-
+A Variogram of the model is plotted.  This takes into account distance and plots variance in the data versus the distance between the sites.  This line is showing very little spatial trend.
 ```{r}
-plot(Variogram(sp_gls, form = ~ x + y))
-
-sp_exp = update(sp_gls, 
-                     corr=corExp(form=~x + y,
-                                 nugget=T)) 
-
-plot(Variogram(sp_exp, resType = 'normalized'))
+plot(Variogram(sp_gls, form = ~ x + y, maxDist = max_dist))
 
 ```
-
+The model is adjusted using the exponential error structure.  This model appears to show a much greater spatial dependence in the residuals.  While the slope is actually greater, the difference between this and the previous graph is not as drastic as it seems when you account for the scale.
 ```{r}
-plot(Variogram(xylopia_gls, form= ~x + y))
+sp_exp = update(sp_gls, corr=corExp(form=~x + y)) 
+
+plot(Variogram(sp_exp, maxDist = max_dist))
+```
+Since this model does not appear to fit the residuals well and there appears to be a nugget of 0.2, the model was further adjusted to include a nugget.  This seems to be a better fit, and the slope is even smaller, showing little spatial dependence once the spatial error term is included.
+```{r}
+sp_exp = update(sp_gls, corr=corExp(form=~x + y, nugget = TRUE)) 
+
+plot(Variogram(sp_exp, maxDist = max_dist))
 ```
 
+With the individual model, there is much greater spatial dependence initially than in initial model with all species.
+```{r}
+plot(Variogram(xylopia_gls, form= ~x + y, maxDist = max_dist))
+```
 
+The model is adjusted using an exponential error structure.  This time with no nugget since the values on the y-axis are so close to zero.  Adding the spatial error term seems to have accounted for some of the spatial dependence of the residuals.
 ```{r}
 xylopia_exp = update(xylopia_gls, 
                      corr=corExp(form=~x + y)) 
 
 plot(Variogram(xylopia_exp))
 
-plot(Variogram(xylopia_exp, resType='normalized'))
 ```
 
-
+The AIC decreased when the spatial error term was added, so the model was improved by this addition.
 ```{r}
-anova(sp_gls, sp_exp)
+anova(sp_gls, sp_exp, test = F)
 
 ```
 
+An even more clear decrease in the AIC indicates that individual model fits much better when the spatial error term is included, but still not as good as the model with all the species and the spatial error term.
+```{r}
+anova(xylopia_gls, xylopia_exp)
+```
+
+The spatial error term did not have a large impact on all of the coefficients. However, the coefficients for *Cordia lasiocalyx*, *Hirtella triandra*, *Picramnia latifolia*, *Quassia amara*, and *Tabernaemontana arborea* did decrease a lot when the spatial error term was added.
 ```{r}
 summary(sp_gls)
 summary(sp_exp)
 ```
 
-```{r}
-anova(xylopia_gls, xylopia_exp)
-```
-
+When the spatial error term was added the *Xylopia macrantha* coefficient did decrease a lot (from 0.844 to 0.292).  This large decrease indicates, like the drop in AIC value and the variograms, that there was more spatial dependence in the residuals in the individual model.
 ```{r}
 summary(xylopia_gls)
 summary(xylopia_exp)
 ```
+
+Overall, the spatial error term was important for both the model with all of the species as explanatory variables and the one with only *Xylopia* as the explanatory variable, as was evidenced from the decrease in AIC value and many of the coefficients.  However, there was more influence for the *Xylopia* only model because the residuals of that model had more spatial dependence, which makes sense because one species is going to show more spatial dependence than multiple species explaining a response together.  Multiple species cover more sites than a single species, so there is less likely to be clustering.  The lowest AIC was 301, so the model with the best fit was the one with all of the species included and the spatial error term (sp_exp), but that was still not a great model of the abundance of *Drypetes standleyi*.
+
 
