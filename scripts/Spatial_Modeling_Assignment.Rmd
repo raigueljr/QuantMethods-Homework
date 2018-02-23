@@ -188,26 +188,28 @@ summary(sp_gls)
 
 
 ```
-A model for the abundance of *Drypetes standleyi* is made with only the abundance of *Xylopia macratha* as the explanatory variable.  The AIC increased to 338, so this model is an even worse fit than the one with all of the species included.
+A model for the abundance of *Drypetes standleyi* is made with only the abundance of *Xylopia macrantha* as the explanatory variable.  The AIC increased to 338, so this model is an even worse fit than the one with all of the species included.
 ```{r}
 xylopia_gls= gls(Drypetes.standleyi~  Xylopia.macrantha, data = spatial_data)
 
 summary(xylopia_gls)
 
 ```
-
+  
 A Variogram of the model is plotted.  This takes into account distance and plots variance in the data versus the distance between the sites.  This line is showing very little spatial trend.
 ```{r}
 plot(Variogram(sp_gls, form = ~ x + y, maxDist = max_dist))
 
 ```
+  
 The model is adjusted using the exponential error structure.  This model appears to show a much greater spatial dependence in the residuals.  While the slope is actually greater, the difference between this and the previous graph is not as drastic as it seems when you account for the scale.
 ```{r}
 sp_exp = update(sp_gls, corr=corExp(form=~x + y)) 
 
 plot(Variogram(sp_exp, maxDist = max_dist))
 ```
-Since this model does not appear to fit the residuals well and there appears to be a nugget of 0.2, the model was further adjusted to include a nugget.  This seems to be a better fit, and the slope is even smaller, showing little spatial dependence once the spatial error term is included.
+  
+Since this model does not appear to fit the residuals well, and there appears to be a nugget of 0.2, the model was further adjusted to include a nugget.  This seems to be a better fit, and the slope is even smaller, showing little spatial dependence once the spatial error term is included.
 ```{r}
 sp_exp = update(sp_gls, corr=corExp(form=~x + y, nugget = TRUE)) 
 
@@ -227,14 +229,14 @@ xylopia_exp = update(xylopia_gls,
 plot(Variogram(xylopia_exp))
 
 ```
-
-The AIC decreased when the spatial error term was added, so the model was improved by this addition.
+  
+The AIC decreased when the spatial error term was added, so the model with all of the species was improved by this addition.
 ```{r}
 anova(sp_gls, sp_exp, test = F)
 
 ```
-
-An even more clear decrease in the AIC indicates that individual model fits much better when the spatial error term is included, but still not as good as the model with all the species and the spatial error term.
+  
+An even more clear decrease in the AIC indicates that the individual model fits much better when the spatial error term is included, but still not as good as the model with all of the species and the spatial error term.
 ```{r}
 anova(xylopia_gls, xylopia_exp)
 ```
